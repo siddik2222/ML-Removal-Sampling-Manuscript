@@ -1,0 +1,226 @@
+##Our working directory
+setwd("D:/Research/ML regression")
+getwd()
+
+##Required libraries
+library(readxl)
+library(tidyverse)
+library(caret)
+library(doParallel)
+library(ggplot2)
+library(gridExtra)
+
+##Upload the data file
+data<-read_excel("data_denV.xlsx")
+head(data)
+str(data)
+
+##Data partition (training & test)
+set.seed(12)
+indexes<-createDataPartition(data$Female,p=0.8, list=F)
+train<-data[indexes,]
+test<-data[-indexes,]
+
+##Register parallel backend
+registerDoParallel(cores=4)
+
+##OLS Regression 
+#Cross-validation
+control <-trainControl(method="cv",
+                       number=10)
+
+#Model metrics
+metric <- "RMSE"
+
+##Model fitting
+fit.mlr<-train(Female~., data=train,
+               method="lm",
+               metric=metric,
+               trControl=control)
+fit.mlr
+
+##Model prediction
+pred1<-predict(fit.mlr,test)
+mse<-mean((test$Female-pred1)^2)
+sqrt(mse)
+mae<-mean(abs(test$Female-pred1))
+
+##Random forest model fitting
+fit.rf<-train(Female~., data=train,
+               method="rf",
+               metric=metric,
+               trControl=control)
+fit.rf
+
+#Model prediction
+pred2<-predict(fit.rf,test)
+mse<-mean((test$Female-pred2)^2)
+sqrt(mse)
+mae<-mean(abs(test$Female-pred2))
+
+##Feature importance by RF
+varImp(fit.rf)
+
+##XGBoost model fitting
+#parameter tuning
+tuneGrid<-expand.grid(nrounds=c(50,100,150),
+                      eta=c(0.01,0.05),
+                      max_depth=c(2,4,6),
+                      colsample_bytree=c(0.5,1),
+                      subsample=c(0.5,1),
+                      gamma=c(0,50),
+                      min_child_weight=c(0,20))
+
+##Model fitting
+fit.xgb<-train(Female~., data=train, method="xgbTree", metric=metric,objective="reg:squarederror",
+               trControl=control,tuneGrid=tuneGrid)
+fit.xgb
+
+#Prediction in training set
+pred<-predict(fit.xgb,train)
+mse<-mean((train$Female-pred)^2)
+sqrt(mse)
+mae<-mean(abs(train$Female-pred))
+
+#Model prediction
+pred3<-predict(fit.xgb,test)
+mse<-mean((test$Female-pred3)^2)
+sqrt(mse)
+mae<-mean(abs(test$Female-pred3))
+
+#Feature importance
+varImp(fit.xgb)
+
+#plot
+df1<-data.frame(test$Female,pred3)
+df1$id<-1:nrow(df1)
+
+plot1<-ggplot()+geom_line(data=df1,aes(x=id,y=test$Female,color="test$Female"))+
+  geom_line(data=df1,aes(x=id,y=pred3,color="pred"))+ggtitle("")+
+  xlab("id")+ylab("")+theme(plot.title=element_text(hjust=0.5))+theme_bw()+
+  theme(legend.position =c(0.9,0.9))
+plot1
+
+data2<-read_excel("xgb.features.imp.xlsx");data2
+fig1<-ggplot(data2,aes(x=Importance,y=reorder(Features,Importance),fill=Features))+
+  geom_bar(stat="identity",position = "dodge")+theme(text = element_text(size=18))+
+  theme_set(theme_bw()+theme(legend.position ="none"))+
+  ggtitle("")+xlab("Percent Contribution")+ylab("Features")
+fig1
+
+
+# set up working directory
+setwd("C:/Users/USER/Desktop/Mosquito Paper/Removal samplng")
+getwd()
+install.packages("readxl")
+library(readxl)
+data<-read_excel("boxplot.xlsx", sheet = 1)
+data
+View(data)
+str(data)
+table(data$Time)
+data
+# Libraries for density pot  
+# Libraries
+library(ggplot2)
+library(hrbrthemes)
+library(dplyr)
+library(tidyr)
+library(viridis)
+
+
+# Seperate box plot
+data
+p1 <- ggplot(data, aes(x=Area, y=total, fill=Area)) +
+  geom_boxplot(alpha=0.7) +
+  stat_summary(fun=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+  theme(legend.position="none") +
+  scale_fill_brewer(palette="Set1")+ ggtitle("A boxplot with total mosquitos") + xlab("Area") + ylab("Total Mosquito numeber")+stat_compare_means(method = "t.test") 
+p1
+p1+ stat_compare_means(method = "t.test")
+p1 + stat_compare_means(
+  aes(label = ..p.signif..), label.x = 1.5, label.y = 40
+)
+
+p2 <- ggplot(data, aes(x=Area, y=Male, fill=Area)) +
+  geom_boxplot(alpha=0.7) +
+  stat_summary(fun=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+  theme(legend.position="none") +
+  scale_fill_brewer(palette="Set1")+ ggtitle("A boxplot with Male mosquitos") + xlab("Area") + ylab(" Male Mosquito numeber")+stat_compare_means(method = "t.test")
+p2
+p2+ stat_compare_means(method = "t.test")
+p3 <- ggplot(data, aes(x=Area, y=Female, fill=Area)) +
+  geom_boxplot(alpha=0.7) +
+  stat_summary(fun=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+  theme(legend.position="none") +
+  scale_fill_brewer(palette="Set1")+ ggtitle("A boxplot with Female mosquitos") + xlab("Area") + ylab("Female Mosquito numeber")+ stat_compare_means(method = "t.test")
+p3
+p3+ stat_compare_means(method = "t.test")
+p3 + stat_compare_means(
+  aes(label = ..p.signif..), label.x = 1.5, label.y = 40
+)
+
+
+p4 <- ggplot(data, aes(x=Area, y=Blood, fill=Area)) +
+  geom_boxplot(alpha=0.7) +
+  stat_summary(fun=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+  theme(legend.position="none") +
+  scale_fill_brewer(palette="Set1")+ ggtitle("A boxplot with Bloodfed mosquitos") + xlab("Area") + ylab("Bloodfed Mosquito numeber")+ stat_compare_means(method = "t.test")
+p4
+p4+ stat_compare_means(method = "t.test")
+
+
+p5 <- ggplot(data, aes(x=Area, y=Nonblood, fill=Area)) +
+  geom_boxplot(alpha=0.7) +
+  stat_summary(fun=mean, geom="point", shape=20, size=14, color="red", fill="red") +
+  theme(legend.position="none") +
+  scale_fill_brewer(palette="Set1")+ ggtitle("A boxplot with Nonbloodfed mosquitos") + xlab("Area") + ylab("Nonblood fed Mosquito numeber")+ stat_compare_means(method = "t.test")
+p5
+p4+ stat_compare_means(method = "t.test")
+
+# Combine plots 
+library(ggpubr)
+figure <- ggarrange(p1,p2,p3,p4,p5,
+                    labels = c("A", "B", "C","D","E"),
+                    ncol = 3, nrow = 3)
+figure
+theme_set(
+  theme_bw() +
+    theme(legend.position = "top")
+)
+
+# Multple box plot
+install.packages("reshape2")
+library(reshape2)
+head(data)  
+options(max.print = 1000000)
+data_long <- melt(data, id = "Area") 
+data_long
+head(data_long)
+
+
+# Adjust Mean value
+ggplot(data_long, aes(x = variable, y = value, color = Area))+ 
+  geom_boxplot () + stat_summary(fun = mean, geom = "text", col = "green",    
+               vjust = 1.5, aes(label = paste("Mean:", round(..y.., digits = 1))))
+
+# Adjust P-value
+
+ggplot(data_long, aes(x = variable, y = value, color = Area))+
+  geom_boxplot () +  stat_summary(geom = "point", aes(group=Area, col=Area), 
+               fun.y = "mean", size = 4, position=position_dodge(width=0.5))+stat_compare_means(method = "t.test")++ theme(text = element_text(size = 25))+ xlab("Adult Adult Ae.aegypti ") + ylab("Mosquito numeber")
+
+
+
+ggplot(data_long, aes(x = variable, y = value, color = Area))+
+  geom_boxplot () +  stat_summary(geom = "point", aes(group=Area, col=Area), 
+                                  fun.y = "mean", size = 4, position=position_dodge(width=0.5))+ stat_compare_means(
+  aes(label = ..p.signif..), label.x = 1.5, label.y = 40)+ theme(text = element_text(size = 15))+ xlab("Adult Ae.aegypti ") + ylab("Mosquito numeber")
+
+
+# Add value label
+data$factor <- factor(data$Time,levels = c(1,2),labels = c("Morning", "Afternoon"),data$Area,levels = c(1,2),labels = c("Rural", "Urban") )
+# Frequencies
+# Unweighted
+fre(data$Time)
+                
